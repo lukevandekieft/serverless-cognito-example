@@ -1,0 +1,117 @@
+service: st-cognito-serverless-demo #app name
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: ${opt:stage, 'dev'}
+
+functions:
+  STTestAuth: #test Lambda
+    handler: handler.handler
+    role: STLambdaRole
+    events:
+      - http:
+          path: tester
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: STApiGatewayAuthorizer
+  STHandleAuth: #auth Lambda
+    handler: handler.handler
+    role: STLambdaRole
+    environment:
+      COGNITO_USER_POOL_ID: 
+        Ref: STCognitoUserPool
+      COGNITO_APP_CLIENT_ID: 
+        Ref: STCognitoUserPoolClient
+    events:
+      - http:
+          path: auth
+          method: any
+          cors: true
+
+resources:
+  Resources:
+    STBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: st-bucket-tester2
+        WebsiteConfiguration:
+          IndexDocument: index.html
+    STBucketPolicy: 
+      Type: AWS::S3::BucketPolicy
+      Properties: 
+        Bucket:
+          Ref: "STBucket"
+        PolicyDocument:
+          Statement:
+            -
+              Effect: "Allow"
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource:
+                Fn::Join:
+                  - ""
+                  - 
+                    - "arn:aws:s3:::"
+                    - 
+                      Ref: "STBucket"
+                    - "/*"
+    STCognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ST
+    STCognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: STWebApp
+        GenerateSecret: false
+        UserPoolId:
+          Ref: "STCognitoUserPool"
+    STLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: STLambdaRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: DynamoDBWriteAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                  - cognito-idp:AdminCreateUser
+                  Resource: "*"
+    STApiGatewayAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: ST
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - Fn::GetAtt: [ STCognitoUserPool, Arn ]
+        IdentitySource: method.request.header.Authorization
+  Outputs:
+    STBucketURL:
+      Description: "ST Bucket Website URL"
+      Value: 
+        "Fn::GetAtt": [ STBucket, WebsiteURL ]
+    STCognitoUserPoolId:
+      Description: "ST Cognito User Pool ID"
+      Value:
+        Ref: "STCognitoUserPool"
+    STCognitoUserPoolClientId:
+      Description: "ST Cognito User Pool Client ID"
+      Value:
+        Ref: "STCognitoUserPoolClient"

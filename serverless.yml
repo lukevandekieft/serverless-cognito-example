@@ -7,7 +7,7 @@ provider:
 
 functions:
   STTestAuth: #test Lambda
-    handler: handler.handler
+    handler: handlerTest.handler
     role: STLambdaRole
     events:
       - http:
@@ -19,7 +19,7 @@ functions:
             authorizerId:
               Ref: STApiGatewayAuthorizer
   STHandleAuth: #auth Lambda
-    handler: handler.handler
+    handler: handlerAuth.handler
     role: STLambdaRole
     environment:
       COGNITO_USER_POOL_ID: 
@@ -69,6 +69,7 @@ resources:
       Properties:
         ClientName: STWebApp
         GenerateSecret: false
+        ExplicitAuthFlows: [USER_PASSWORD_AUTH]
         UserPoolId:
           Ref: "STCognitoUserPool"
     STLambdaRole:

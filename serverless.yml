@@ -1,4 +1,4 @@
-service: st-cognito-serverless-demo #app name
+service: st-cognito-serverless-demo
 
 provider:
   name: aws
@@ -58,15 +58,6 @@ resources:
                 Service:
                   - lambda.amazonaws.com
               Action: sts:AssumeRole
-        Policies:
-          - PolicyName: DynamoDBWriteAccess
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                  - cognito-idp:AdminCreateUser
-                  Resource: "*"
     STApiGatewayAuthorizer:
       Type: AWS::ApiGateway::Authorizer
       Properties:
